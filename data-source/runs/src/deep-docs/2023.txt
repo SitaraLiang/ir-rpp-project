@@ -1,0 +1,5 @@
+https://trec.nist.gov/results/trec32/deep/input.D_bm25_splades.gz
+https://trec.nist.gov/results/trec32/deep/input.D_naverloo-frgpt4.gz
+https://trec.nist.gov/results/trec32/deep/input.D_naverloo_bm25_RR.gz
+https://trec.nist.gov/results/trec32/deep/input.D_naverloo_bm_splade_RR.gz
+https://trec.nist.gov/results/trec32/deep/input.colbertv2.gz
