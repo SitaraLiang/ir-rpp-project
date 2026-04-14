@@ -9,7 +9,8 @@ CODEX_TARGETS=$(foreach X,$(CODEX_CORPORA),$(foreach Y,$(CODEX),$X/2023/input.$Y
 IR_TARGETS=robust deep-docs deep-pass core legal web
 .PHONY: $(IR_TARGETS) 
 
-all: $(IR_TARGETS) $(RECSYS_TARGETS) $(CODEX_TARGETS)
+all: $(RECSYS_TARGETS)
+# all: $(IR_TARGETS) $(RECSYS_TARGETS) $(CODEX_TARGETS)
 
 web:
 	mkdir -p web/2009; cd web/2009; wget -q --user=${TREC_RESULTS_USER} --password=${TREC_RESULTS_PASSWORD} -i ../../src/web/2009.txt
