@@ -5,15 +5,15 @@ import aggregation.rank_aggregation as rank_aggregation
 from measures.measures import is_metric
 import json
 import random
-from util.pref_io import read_metrics
-from util.pref_io import read_all_measure_names
-from util.pref_io import read_prefs
-from util.pref_io import read_qids
-from util.pref_io import get_query_rankings_from_preferences
-from util.pref_io import get_query_rankings_from_metrics
-from util.pref_io import Preferences
-from util.pref_io import Metrics
-from util.pref_io import Rankings
+from .util.pref_io import read_metrics
+from .util.pref_io import read_all_measure_names
+from .util.pref_io import read_prefs
+from .util.pref_io import read_qids
+from .util.pref_io import get_query_rankings_from_preferences
+from .util.pref_io import get_query_rankings_from_metrics
+from .util.pref_io import Preferences
+from .util.pref_io import Metrics
+from .util.pref_io import Rankings
 
 if __name__ == "__main__":
     parser: argparse.ArgumentParser = argparse.ArgumentParser(sys.argv[0])

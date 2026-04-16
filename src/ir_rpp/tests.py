@@ -27,7 +27,7 @@ def run_ttests(df_preference, metrics=["rpp", "invrpp", "dcgrpp", "ap", "ndcg", 
     df_ttest = pd.DataFrame(results)
 
     # Bonferroni
-    reject, pvals_corrected, _, _ = multipletests(df_ttest["pval"], method="bonferroni")
+    reject, pvals_corrected, _, _ = multipletests(df_ttest["pval"], method="bonferroni", alpha=0.05)
     df_ttest["pval_bonferroni"] = pvals_corrected
     df_ttest["significant"] = reject
 
