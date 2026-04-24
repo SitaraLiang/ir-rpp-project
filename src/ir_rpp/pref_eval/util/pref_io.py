@@ -1,5 +1,5 @@
 import json
-from measures.measures import is_metric
+from ..measures.measures import is_metric
 import sys
 import gzip
 
