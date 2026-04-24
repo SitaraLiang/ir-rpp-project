@@ -1,4 +1,5 @@
 import glob
+import pandas as pd
 from ir_rpp.pref_eval import util
 from ir_rpp.pref_eval.pref_eval import get_measures, get_prefs
 from tqdm import tqdm # TODO: idk why tqdm.notebook stopped working
@@ -6,7 +7,7 @@ from tqdm import tqdm # TODO: idk why tqdm.notebook stopped working
 
 def load_labels_and_runs(
     dataset: str,
-    binary_relevance=4,
+    binary_relevance=None,
 ):
     """returns: summary, df_preference, df_metric"""
     qrels_file = f"../../data-source/qrels/{dataset}/2018.txt"
@@ -31,3 +32,13 @@ def load_dfs(
     _, runs = load_labels_and_runs(dataset, binary_relevance)
     measures = get_measures(metrics, None)
     return get_prefs(1, runs, measures, per_query)
+
+def dataset_summary(qrels, runs):
+    return pd.Series(
+        {
+            "requests": len(qrels),
+            "runs": len(runs),
+            "rel/request": sum([len(val) for val in qrels.values()]) / len(qrels),
+            "subtopics/request":"todo"
+        }
+    )
