@@ -144,7 +144,8 @@ def aggregate_preferences(
     Main of pref_aggregate adapted for usage in notebooks. Preferences are loaded separately.
     Note that it does both aggregation across pairs and queries.
     """
-    retval = []
+    system_orderings_by_query = []
+    system_orderings = {}
     qids = list({pref["qid"] for pref in prefs}) if (query_fraction < 1.0) else None
 
     sample_size = (
@@ -181,7 +182,7 @@ def aggregate_preferences(
                     output_object[kk] = vv
                 for kk, vv in m_rankings[qid].items():
                     output_object[kk] = vv
-                retval.append(output_object)
+                system_orderings_by_query.append(output_object)
 
         if not nosummary:
             output_object = {}
@@ -216,6 +217,6 @@ def aggregate_preferences(
                     output_object[measure]["borda"] = rank_aggregation.borda(
                         rankings_metric
                     )
-            retval.append(output_object)
+            system_orderings = output_object
 
-    return retval
+    return system_orderings_by_query, system_orderings
