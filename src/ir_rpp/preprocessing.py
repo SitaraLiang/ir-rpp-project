@@ -26,7 +26,7 @@ def load_dfs(
     dataset,
     metrics=["rpp", "invrpp", "dcgrpp", "ap", "ndcg", "rr"],
     binary_relevance=4,
-    per_query=False,
+    per_query=True,
 ):
     """returns: summary, df_preference, df_metric"""
     _, runs = load_labels_and_runs(dataset, binary_relevance)
