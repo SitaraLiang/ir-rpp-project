@@ -83,7 +83,8 @@ def evaluate_preferences(
                 full_summary.append(output_object)
 
         return full_summary, preferences, raw_metrics
-    
+
+
 def prepare_prefs(prefs, metrics, current_sample, qids=None):
     retval: Preferences = {}
     for obj in prefs:
@@ -108,6 +109,7 @@ def prepare_prefs(prefs, metrics, current_sample, qids=None):
                 retval[qid][metric][pair_tag] = preference
     return retval
 
+
 def get_metrics_from_prefs(prefs, metrics, current_sample, qids=None):
     retval: Metrics = {}
     for obj in prefs:
@@ -131,7 +133,8 @@ def get_metrics_from_prefs(prefs, metrics, current_sample, qids=None):
                     retval[qid][metric] = {}
                 retval[qid][metric][run] = meas
     return retval
-                        
+
+
 def aggregate_preferences(
     prefs,
     query_eval_wanted=False,
@@ -163,8 +166,10 @@ def aggregate_preferences(
                 for key in prefs[0].keys()
                 if key not in ["qid", "sample", "type", "runi", "runj", "run"]
             ]
-            
-        metrics: Metrics = get_metrics_from_prefs(prefs, measures, src_sample, sample_qids)
+
+        metrics: Metrics = get_metrics_from_prefs(
+            prefs, measures, src_sample, sample_qids
+        )
         prefs: Preferences = prepare_prefs(prefs, measures, src_sample, sample_qids)
 
         if sample_qids is None:
@@ -172,7 +177,7 @@ def aggregate_preferences(
 
         p_rankings: Rankings = get_query_rankings_from_preferences(prefs)
         m_rankings: Rankings = get_query_rankings_from_metrics(metrics)
-        
+
         if query_eval_wanted:
             for qid in sample_qids:
                 output_object = {}
@@ -220,3 +225,10 @@ def aggregate_preferences(
             system_orderings = output_object
 
     return system_orderings_by_query, system_orderings
+
+
+def get_ordering(system_orderings, metric):
+    ordering = system_orderings[metric]
+    if isinstance(ordering, dict):
+        ordering = ordering.get("mean") or ordering.get("mc4")
+    return ordering

@@ -14,7 +14,11 @@ import pandas as pd
 
 
 def get_prefs(
-    sample: int, runs: dict[str, trec_io.Run], measures: list[str], per_query: bool, output_df = True
+    sample: int,
+    runs: dict[str, trec_io.Run],
+    measures: list[str],
+    per_query: bool,
+    output_df=True,
 ) -> tuple[dict[str, dict[str, float]], pd.DataFrame, pd.DataFrame]:
     runids: list[str] = list(runs.keys())
     qids: list[str] = list(runs[runids[0]].keys())

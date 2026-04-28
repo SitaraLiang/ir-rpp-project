@@ -2,7 +2,7 @@ import glob
 import pandas as pd
 from ir_rpp.pref_eval import util
 from ir_rpp.pref_eval.pref_eval import get_measures, get_prefs
-from tqdm import tqdm # TODO: idk why tqdm.notebook stopped working
+from tqdm import tqdm  # TODO: idk why tqdm.notebook stopped working
 
 
 def load_labels_and_runs(
@@ -21,6 +21,7 @@ def load_labels_and_runs(
 
     return qrels, runs
 
+
 # TODO: Give this function a clearer name
 def load_dfs(
     dataset,
@@ -33,12 +34,14 @@ def load_dfs(
     measures = get_measures(metrics, None)
     return get_prefs(1, runs, measures, per_query)
 
+
 def dataset_summary(qrels, runs):
+    """Reproduce a line from Table 1"""
     return pd.Series(
         {
             "requests": len(qrels),
             "runs": len(runs),
             "rel/request": sum([len(val) for val in qrels.values()]) / len(qrels),
-            "subtopics/request":"todo"
+            "subtopics/request": "todo",
         }
     )
