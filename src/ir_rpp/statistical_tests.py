@@ -9,7 +9,7 @@ import pandas as pd
 from tqdm import tqdm
 
 
-def run_ttests(df_preference, metrics=["rpp", "invrpp", "dcgrpp", "ap", "ndcg", "rr"]):
+def run_ttests(df_preference, metrics=["rpp", "dcgrpp", "invrpp", "ap", "ndcg", "rr"]):
     if not isinstance(df_preference, pd.DataFrame):
         df_preference = pd.DataFrame(df_preference)
 
@@ -35,12 +35,13 @@ def run_ttests(df_preference, metrics=["rpp", "invrpp", "dcgrpp", "ap", "ndcg", 
 
     df_ttest = pd.DataFrame(results)
 
-    # Bonferroni
-    reject, pvals_corrected, _, _ = multipletests(
-        df_ttest["pval"], method="bonferroni", alpha=0.05
-    )
-    df_ttest["pval_bonferroni"] = pvals_corrected
-    df_ttest["significant"] = reject
+    # Bonferroni correction per metric
+    for metric, group in df_ttest.groupby(["metric"]):
+        reject, pvals_corrected, _, _ = multipletests(
+            group["pval"], method="bonferroni", alpha=0.05
+        )
+        df_ttest.loc[group.index, "pval_bonferroni"] = pvals_corrected
+        df_ttest.loc[group.index, "significant"] = reject
 
     df_summary = round(
         df_ttest.groupby("metric", sort=False)["significant"].mean().to_frame().T * 100,
@@ -52,7 +53,7 @@ def run_ttests(df_preference, metrics=["rpp", "invrpp", "dcgrpp", "ap", "ndcg", 
 
 def run_tukeys_hsd_test(
     df_preference,
-    metrics=["rpp", "invrpp", "dcgrpp", "ap", "ndcg", "rr"],
+    metrics=["rpp", "dcgrpp", "invrpp", "ap", "ndcg", "rr"],
     n_permutations=2000,
     alpha=0.05,
     random_state=None,
@@ -227,15 +228,26 @@ def run_tau_ordering_comparison(
     return df_tau_between_metrics
 
 
-def plot_metric_correlations(preferences, metrics, nb_queries=None):
+def plot_metric_correlations(preferences, metrics, nb_queries=None, nb_prefs=None):
     df_preferences = pd.DataFrame(preferences)
-    if nb_queries is None:
-        df_query_level_diffs = df_preferences
+
+    # Sample queries (qids)
+    if nb_queries is not None:
+        unique_qids = df_preferences["qid"].unique()
+
+        sampled_qids = pd.Series(unique_qids).sample(
+            n=min(nb_queries, len(unique_qids)), replace=False, random_state=42
+        )
+
+        df_query_level_diffs = df_preferences[df_preferences["qid"].isin(sampled_qids)]
     else:
-        query_ids = [str(i) for i in range(nb_queries)]
-        df_query_level_diffs = df_preferences[
-            df_preferences["qid"].apply(lambda qid: qid in query_ids)
-        ]
+        df_query_level_diffs = df_preferences
+
+    # Sample preferences (rows)
+    if nb_prefs is not None:
+        df_query_level_diffs = df_query_level_diffs.sample(
+            n=min(nb_prefs, len(df_query_level_diffs)), replace=False, random_state=42
+        )
 
     rpp = df_query_level_diffs["rpp"]
     for metric_name in df_query_level_diffs.columns:
@@ -243,6 +255,7 @@ def plot_metric_correlations(preferences, metrics, nb_queries=None):
         if "rpp" not in metric_name and metric_name in metrics:
             do_agree = np.sign(rpp) == np.sign(metric)
             fig, ax = plt.subplots()
+
             ax.scatter(
                 rpp, metric, c=["black" if agree else "red" for agree in do_agree], s=1
             )
