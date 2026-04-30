@@ -76,12 +76,27 @@ def load_dfs(
 
 
 def dataset_summary(qrels, runs):
-    """Reproduce a line from Table 1"""
-    return pd.Series(
-        {
-            "requests": len(qrels),
-            "runs": len(runs),
-            "rel/request": sum([len(val) for val in qrels.values()]) / len(qrels),
-            "subtopics/request": "todo",
-        }
-    )
+    all_subtopic_counts = []
+    total_rel_instances = 0
+    
+    for qid in qrels:
+        subtopics = set()
+        for did in qrels[qid]:
+            # trec_io.py stores subtopics as keys in the dict qrels[qid][did]
+            for st_id, grade in qrels[qid][did].items():
+                if grade > 0:
+                    subtopics.add(st_id)
+                    # rel/request = (doc, subtopic) pair
+                    if st_id > 0: 
+                        total_rel_instances += 1
+        all_subtopic_counts.append(len(subtopics))
+    
+    num_queries = len(qrels) if qrels else 1
+    avg_subtopics = sum(all_subtopic_counts) / num_queries
+
+    return pd.Series({
+        "requests": len(qrels),
+        "runs": len(runs),
+        "rel/request": total_rel_instances / num_queries,
+        "subtopics/request": round(avg_subtopics, 2)
+    })

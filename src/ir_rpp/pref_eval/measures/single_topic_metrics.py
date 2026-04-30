@@ -138,3 +138,5 @@ def d_ndcg(x: RelevanceVector, y: RelevanceVector, k: int = 0) -> float:
 
 def ndcg(x: RelevanceVector, k: int = 0) -> float:
     return dcg(x, k) / dcgopt(x, k)
+
+

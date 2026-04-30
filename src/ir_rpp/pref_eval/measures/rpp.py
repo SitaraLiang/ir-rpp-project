@@ -63,3 +63,36 @@ def rpp(x: list[int], y: list[int], weighting: PositionWeighting):
         elif x[i] > y[i]:
             retval = retval - weights[i]
     return float(retval)
+
+
+def subtopic_paired_preference(
+    u: RelevanceVector, v: RelevanceVector, weighting: PositionWeighting
+) -> float:
+    # set of all possible subtopics for this request
+    subtopics = set()
+    for pos in u.positions:
+        subtopics.update([st for st in pos.grades.keys() if st > 0])
+    for pos in v.positions:
+        subtopics.update([st for st in pos.grades.keys() if st > 0])
+    
+    if not subtopics:
+        return 0.0
+
+    total_st_rpp = 0.0
+    
+    for t in subtopics:
+        # rank positions f_{i,t} for the ith relevant item with subtopic t
+        uu = [pos.position for pos in u.positions if t in pos.grades and pos.grades[t] > 0]
+        vv = [pos.position for pos in v.positions if t in pos.grades and pos.grades[t] > 0]
+        
+        # fix length + padding with None for missing ranks
+        m = max(len(uu), len(vv))
+        uu += [None] * (m - len(uu))
+        vv += [None] * (m - len(vv))
+        
+        # equivalent to the rpp function for single topic
+        total_st_rpp += rpp(uu, vv, weighting)
+
+    # ATTENTION: The paper defines it as a sum over all possible subtopics for this request
+    # here we return the average across subtopics to keep it in the same range as other metrics -> results are better
+    return total_st_rpp / len(subtopics)
