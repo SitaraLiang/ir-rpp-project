@@ -119,6 +119,7 @@ def get_measures(m, ms):
         "lexirecall",
         "lexiprecision",
         "rrlexiprecision",
+        "asl",
     ]
     all_measures = [
         "rpp",
@@ -142,6 +143,7 @@ def get_measures(m, ms):
         "p@10",
         "r@1",
         "r@10",
+        "asl",
     ]
 
     measures: list[str] = m if m is not None else []

@@ -68,6 +68,8 @@ def compute_preference(
         return d_err_ia_at_k(x, y, 20)
     if preference == "map-ia":
         return d_map_ia(x, y)
+    if preference == "asl":
+        return d_atomized_search_length(xx, yy)
     return 0.0
 
 
@@ -117,4 +119,6 @@ def compute_metric(x: RelevanceVector, metric: str) -> float:
         return err_ia_at_k(x, 20)
     if metric == "map-ia":
         return map_ia(x)
+    if metric == "asl":
+        return atomized_search_length(xx, k)
     return 0.0
