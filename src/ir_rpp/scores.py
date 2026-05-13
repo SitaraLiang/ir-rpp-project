@@ -29,7 +29,7 @@ ALL_METRICS = [
     "rr",
 ]
 
-EXTENDED_METRICS = ALL_METRICS.extend("als")
+EXTENDED_METRICS = ALL_METRICS + ["asl"]
 
 
 def subsample_labels(runs, qrels, label_fraction, label_fraction_policy="random"):
@@ -82,7 +82,7 @@ def subsample_queries(runs, query_fraction):
 def evaluate_preferences(
     runs,
     qrels=None,  # needed only for missing labels
-    measures=ALL_METRICS,
+    measures=EXTENDED_METRICS,
     measure_set=None,  # preferences, all, none
     query_eval_wanted=False,
     nosummary=False,
