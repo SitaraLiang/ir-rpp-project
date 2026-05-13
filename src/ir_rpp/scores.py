@@ -1,6 +1,7 @@
 from .pref_eval.pref_eval import get_measures, get_prefs
 import random
 import pandas as pd
+import numpy as np
 
 from .pref_eval.util.pref_io import (
     read_qids,
@@ -19,10 +20,48 @@ from copy import deepcopy
 
 from tqdm.auto import tqdm
 
+ALL_METRICS = [
+    "rpp",
+    "invrpp",
+    "dcgrpp",
+    "ap",
+    "ndcg",
+    "rr",
+]
 
-def subsample_labels(runs, label_fraction):
+EXTENDED_METRICS = ALL_METRICS.extend("als")
+
+
+def subsample_labels(runs, qrels, label_fraction, label_fraction_policy="random"):
     runs = deepcopy(runs)
-    ...
+    qrels = deepcopy(qrels)
+
+    # What he was doing when excluding labels in pref_eval:
+    if label_fraction_policy == "pool":
+        raise NotImplementedError("we will not use pooled label fraction policy")
+        # qrels_pool_frequencies = trec_io.compute_qrel_pool_frequencies(
+        #     args.runfiles, qrels
+        # )
+    
+    for qid in qrels.keys(): 
+        dids = list(qrels[qid].keys())
+        num_sample = max(int(len(dids) * label_fraction), 1)
+        
+        if num_sample < len(dids):
+            if label_fraction_policy == "pool":
+                raise NotImplementedError(
+                    "we will not use pooled label fraction policy"
+                )
+                # dids_to_remove = qrels_pool_frequencies[qid][num_sample:]
+
+            else:
+                dids_to_remove = random.sample(dids, len(dids) - num_sample)
+            
+                
+            # for did in dids_to_remove:
+            #     qrels[qid].pop(did, None)
+            for run in runs.values():
+                run[qid].remove_dids(dids_to_remove)
     return runs
 
 
@@ -42,7 +81,8 @@ def subsample_queries(runs, query_fraction):
 
 def evaluate_preferences(
     runs,
-    measures,
+    qrels=None,  # needed only for missing labels
+    measures=ALL_METRICS,
     measure_set=None,  # preferences, all, none
     query_eval_wanted=False,
     nosummary=False,
@@ -51,6 +91,7 @@ def evaluate_preferences(
     label_fraction_policy="random",  # random, pool TODO: why no query_fraction_policy
     samples=1,
     # topk=None,
+    pbar=True
 ) -> tuple[list, list | pd.DataFrame, list | pd.DataFrame]:
     """Main of pref_eval.py adapted for usage in notebooks. Runs are loaded separately."""
 
@@ -70,7 +111,7 @@ def evaluate_preferences(
         #     if num_sample < len(qids):
         #         qids_to_remove = random.sample(qids, len(qids) - num_sample)
         #         for qid in qids_to_remove:
-        #             qrels.pop(qid, None)        
+        #             qrels.pop(qid, None)
         # if label_fraction < 1.0:
         #     if label_fraction_policy == "pool":
         #         # qrels_pool_frequencies = trec_io.compute_qrel_pool_frequencies(
@@ -92,14 +133,20 @@ def evaluate_preferences(
         #                 dids_to_remove = random.sample(dids, len(dids) - num_sample)
         #             for did in dids_to_remove:
         #                 qrels[qid].pop(did, None)
-        
+
         if query_fraction < 1.0:
             runs = subsample_queries(runs, query_fraction)
-        
+
         if label_fraction < 1.0:
-            # TODO: implement it...
-            raise NotImplementedError
-            runs = subsample_labels(runs, label_fraction)
+            assert qrels is not None, (
+                "For missing labels experiments, original qrels are required"
+            )
+            runs = subsample_labels(
+                runs=runs,
+                qrels=qrels,
+                label_fraction=label_fraction,
+                label_fraction_policy=label_fraction_policy,
+            )
 
         summary_per_sample, preferences_per_sample, raw_metrics_per_sample = get_prefs(
             sample=sample,
@@ -107,6 +154,7 @@ def evaluate_preferences(
             measures=measures,
             per_query=query_eval_wanted,
             output_df=False,
+            pbar=pbar
         )
         full_summary_per_sample = []
         if not nosummary:
@@ -183,7 +231,7 @@ def aggregate_preferences(
     query_fraction=1.0,
     num_samples=1,
     measures=[],  # default: all measures in the preferences file
-    nb_queries = None # NOTE: added myself, keep only first nb_queries queries
+    nb_queries=None,  # NOTE: added myself, keep only first nb_queries queries
 ):
     """
     Main of pref_aggregate adapted for usage in notebooks. Preferences are loaded separately.
@@ -193,13 +241,26 @@ def aggregate_preferences(
     system_orderings = {}
     system_orderings_by_query_by_sample = []
     system_orderings_by_sample = []
-    
-    qids_to_keep = sorted(list({pref["qid"] for pref in prefs if pref["qid"] != "all"}))[:nb_queries] + ["all"] if nb_queries is not None else None
-    
+
+    qids_to_keep = (
+        sorted(list({pref["qid"] for pref in prefs if pref["qid"] != "all"}))[
+            :nb_queries
+        ]
+        + ["all"]
+        if nb_queries is not None
+        else None
+    )
+
     if qids_to_keep is not None:
-        pref_eval_output = [pref for pref in pref_eval_output if pref["qid"] in qids_to_keep]
-    
-    qids = list({pref["qid"] for pref in pref_eval_output}) if (query_fraction < 1.0) else None
+        pref_eval_output = [
+            pref for pref in pref_eval_output if pref["qid"] in qids_to_keep
+        ]
+
+    qids = (
+        list({pref["qid"] for pref in pref_eval_output})
+        if (query_fraction < 1.0)
+        else None
+    )
 
     sample_size = (
         max(1, int(len(qids) * query_fraction)) if (query_fraction < 1.0) else None
@@ -220,7 +281,9 @@ def aggregate_preferences(
         metrics: Metrics = get_metrics_from_prefs(
             pref_eval_output, measures, src_sample, sample_qids
         )
-        prefs: Preferences = prepare_prefs(pref_eval_output, measures, src_sample, sample_qids)
+        prefs: Preferences = prepare_prefs(
+            pref_eval_output, measures, src_sample, sample_qids
+        )
 
         if sample_qids is None:
             sample_qids = list(prefs.keys())
@@ -272,10 +335,10 @@ def aggregate_preferences(
                         rankings_metric
                     )
             system_orderings = output_object
-            
+
             system_orderings_by_query_by_sample.append(system_orderings_by_query)
             system_orderings_by_sample.append(system_orderings)
-            
+
     return system_orderings_by_query_by_sample, system_orderings_by_sample
 
 

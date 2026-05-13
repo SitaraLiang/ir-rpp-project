@@ -132,3 +132,25 @@ class RelevanceVector:
                     retval.append(t)
         retval.sort(key=lambda x: x[0])
         return retval
+
+    # NOTE: my method to exclude missing labels:
+
+    def remove_dids(self, dids_to_remove):
+        
+        # TODO: self.num_retrieved ?
+        self.positions = [
+            position
+            for position in self.positions
+            if position.did not in dids_to_remove
+        ]
+
+        # TODO: self.grades ?
+        # TODO: self.subtopics ?
+
+        self.dids = [position.did for position in self.positions]
+
+        self._cached_vector = [position.position for position in self.positions]
+        self._cached_rel_ret = len(
+            [position for position in self._cached_vector if position is not None]
+        )
+        # TODO: self.grade_histogram !?

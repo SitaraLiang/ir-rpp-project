@@ -8,6 +8,9 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+from .scores import ALL_METRICS, EXTENDED_METRICS
+from .scores import evaluate_preferences, aggregate_preferences
+
 
 def run_ttests(df_preference, metrics=["rpp", "dcgrpp", "invrpp", "ap", "ndcg", "rr"]):
     if not isinstance(df_preference, pd.DataFrame):
@@ -228,7 +231,9 @@ def run_tau_ordering_comparison(
     return df_tau_between_metrics
 
 
-def plot_metric_correlations(preferences, metrics, nb_queries=None, nb_prefs=None):
+def plot_metric_correlations(
+    preferences, metrics=EXTENDED_METRICS, nb_queries=None, nb_prefs=None
+):
     df_preferences = pd.DataFrame(preferences)
 
     # Sample queries (qids)
@@ -269,3 +274,151 @@ def plot_metric_correlations(preferences, metrics, nb_queries=None, nb_prefs=Non
                 + f" (r={np.corrcoef(rpp, metric)[0, 1]:.2f}; sa={sum(do_agree) / len(do_agree):.2f})"
             )
         plt.show()
+
+
+def run_tau_missing_queries(
+    pref_eval_output,
+    system_orderings,
+    num_samples=10,
+    query_fractions=np.linspace(0.05, 0.95, 20),
+):
+    missing_queries_orderings_by_sample = {}
+    for query_fraction in tqdm(query_fractions):
+        _, missing_queries_orderings_by_sample[float(query_fraction)] = (
+            aggregate_preferences(
+                pref_eval_output=pref_eval_output,
+                query_eval_wanted=False,
+                query_fraction=query_fraction,
+                num_samples=num_samples,
+            )
+        )
+    missing_queries_tau_mean = {}
+    for metric in ALL_METRICS:
+        missing_queries_tau_mean[metric] = []
+        for query_fraction in query_fractions:
+            tau_mean = 0
+            n_samples = 0
+            for missing_queries_orderings in missing_queries_orderings_by_sample[
+                float(query_fraction)
+            ]:
+                tau, _ = run_kendal_tau(
+                    get_ordering(missing_queries_orderings, metric),
+                    get_ordering(system_orderings, metric),
+                )
+                tau_mean += tau
+                n_samples += 1
+            tau_mean /= n_samples
+            missing_queries_tau_mean[metric].append(tau_mean)
+    return missing_queries_tau_mean
+
+
+METRIC_STYLES = {
+    "rpp": {"color": "black", "linestyle": "-"},
+    "dcgrpp": {"color": "black", "linestyle": "--"},
+    "invrpp": {"color": "black", "linestyle": ":"},
+    "ndcg": {"color": "red", "linestyle": "-"},
+    "ap": {"color": "blue", "linestyle": "-"},
+    "rr": {"color": "green", "linestyle": "-"},
+}
+
+
+def plot_missing_queries(
+    missing_queries_tau_mean, nb_queries, query_fractions=np.linspace(0.05, 0.95, 20)
+):
+    for metric in ALL_METRICS:
+        style = METRIC_STYLES.get(metric.lower(), {})
+        plt.plot(
+            [0] + [fraction * nb_queries for fraction in query_fractions],
+            [0] + missing_queries_tau_mean[metric],
+            label=metric.upper(),
+            **style,
+        )
+        plt.legend()
+        plt.xlabel("requests")
+        plt.ylabel("$\\tau$")
+
+
+def run_tau_missing_labels(
+    runs, qrels, system_orderings, num_samples, label_fractions=np.linspace(0.1, 0.9, 9)
+):
+
+    missing_labels_orderings_by_sample = {}
+
+    for label_fraction in tqdm(label_fractions):
+        missing_labels_orderings_by_sample[float(label_fraction)] = []
+        for _ in range(num_samples):
+            summary, preferences, raw_metrics = evaluate_preferences(
+                runs=runs,
+                qrels=qrels,
+                label_fraction=label_fraction,
+                query_eval_wanted=True,
+                pbar=False,
+            )
+
+            pref_eval_output = summary + preferences + raw_metrics
+
+            _, system_orderings_by_sample = aggregate_preferences(
+                pref_eval_output=pref_eval_output,
+                query_eval_wanted=True,
+            )
+
+            missing_labels_orderings_by_sample[float(label_fraction)].extend(
+                system_orderings_by_sample
+            )
+    missing_labels_tau_mean = {}
+    missing_labels_tau_std = {}
+    for metric in ALL_METRICS:
+        missing_labels_tau_mean[metric] = []
+        missing_labels_tau_std[metric] = []
+        for label_fraction in label_fractions:
+            tau_values = []
+            for missing_labels_orderings in missing_labels_orderings_by_sample[
+                float(label_fraction)
+            ]:
+                tau, _ = run_kendal_tau(
+                    get_ordering(missing_labels_orderings, metric),
+                    get_ordering(system_orderings, metric),
+                )
+                tau_values.append(tau)
+            missing_labels_tau_mean[metric].append(np.mean(tau_values))
+            missing_labels_tau_std[metric].append(np.mean(tau_values))
+    return missing_labels_tau_mean, missing_labels_tau_std
+
+
+def plot_missing_labels(
+    missing_labels_tau_mean,
+    missing_labels_tau_std,
+    label_fractions=np.linspace(0.1, 0.9, 9),
+    plot_errorbars=True,
+):
+    for metric in ALL_METRICS:
+        style = METRIC_STYLES.get(metric.lower(), {})
+        x = [fraction * 100 for fraction in label_fractions] + [100]
+        y = missing_labels_tau_mean[metric] + [1]
+        yerr = missing_labels_tau_std[metric] + [0]
+
+        if plot_errorbars:
+            plt.errorbar(
+                x,
+                y,
+                yerr=yerr,
+                label=metric.upper(),
+                capsize=3,
+                **style,
+            )
+        else:
+            plt.plot(
+                x,
+                y,
+                label=metric.upper(),
+                **style,
+            )
+
+    plt.xticks(
+        ticks=[fraction * 100 for fraction in label_fractions] + [100],
+        labels=[str(100 - fraction * 100) for fraction in label_fractions] + ["0"],
+    )
+    plt.legend()
+    plt.ylim((0.3, 1.0))
+    plt.xlabel("missing (%)")
+    plt.ylabel("$\\tau$")

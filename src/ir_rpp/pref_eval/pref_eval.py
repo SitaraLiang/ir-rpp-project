@@ -19,6 +19,7 @@ def get_prefs(
     measures: list[str],
     per_query: bool,
     output_df=True,
+    pbar=True
 ) -> tuple[dict[str, dict[str, float]], pd.DataFrame, pd.DataFrame]:
     runids: list[str] = list(runs.keys())
     qids: list[str] = list(runs[runids[0]].keys())
@@ -26,8 +27,11 @@ def get_prefs(
     retval: dict[str, dict[str, float]] = {}
     preference_results = []
     metric_results = []
-
-    for qid in tqdm(qids, "Iterating over qids"):
+    if pbar:
+        qids_iter = tqdm(qids, "Iterating over qids")
+    else:
+        qids_iter = qids
+    for qid in qids_iter:
         for i in range(len(runids)):
             runid_i: str = runids[i]
             rv_i: RelevanceVector = runs[runid_i][qid]
