@@ -17,6 +17,8 @@ from .pref_eval.measures.measures import is_metric
 
 from copy import deepcopy
 
+from tqdm.auto import tqdm
+
 
 def subsample_labels(runs, label_fraction):
     runs = deepcopy(runs)
@@ -150,7 +152,6 @@ def prepare_prefs(prefs, metrics, current_sample, qids=None):
 
 
 def get_metrics_from_prefs(prefs, metrics, current_sample, qids=None):
-    print(prefs)
     retval: Metrics = {}
     for obj in prefs:
         qid: str = obj["qid"]
@@ -176,7 +177,7 @@ def get_metrics_from_prefs(prefs, metrics, current_sample, qids=None):
 
 
 def aggregate_preferences(
-    prefs,
+    pref_eval_output,
     query_eval_wanted=False,
     nosummary=False,
     query_fraction=1.0,
@@ -194,15 +195,16 @@ def aggregate_preferences(
     qids_to_keep = sorted(list({pref["qid"] for pref in prefs if pref["qid"] != "all"}))[:nb_queries] + ["all"] if nb_queries is not None else None
     
     if qids_to_keep is not None:
-        prefs: Preferences = [pref for pref in prefs if pref["qid"] in qids_to_keep]
+        pref_eval_output = [pref for pref in pref_eval_output if pref["qid"] in qids_to_keep]
     
-    qids = list({pref["qid"] for pref in prefs}) if (query_fraction < 1.0) else None
+    qids = list({pref["qid"] for pref in pref_eval_output}) if (query_fraction < 1.0) else None
 
     sample_size = (
         max(1, int(len(qids) * query_fraction)) if (query_fraction < 1.0) else None
     )
 
     for sample in range(num_samples):
+        ...
         sample_qids = None if qids is None else random.sample(qids, sample_size)
 
         src_sample = 0 if (query_fraction < 1.0) else sample
@@ -210,14 +212,14 @@ def aggregate_preferences(
         if len(measures) == 0:
             measures = [
                 key
-                for key in prefs[0].keys()
+                for key in pref_eval_output[0].keys()
                 if key not in ["qid", "sample", "type", "runi", "runj", "run"]
             ]
 
         metrics: Metrics = get_metrics_from_prefs(
-            prefs, measures, src_sample, sample_qids
+            pref_eval_output, measures, src_sample, sample_qids
         )
-        prefs: Preferences = prepare_prefs(prefs, measures, src_sample, sample_qids)
+        prefs: Preferences = prepare_prefs(pref_eval_output, measures, src_sample, sample_qids)
 
         if sample_qids is None:
             sample_qids = list(prefs.keys())
@@ -269,7 +271,6 @@ def aggregate_preferences(
                         rankings_metric
                     )
             system_orderings = output_object
-
     return system_orderings_by_query, system_orderings
 
 
