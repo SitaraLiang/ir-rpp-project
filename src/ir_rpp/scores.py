@@ -191,6 +191,8 @@ def aggregate_preferences(
     """
     system_orderings_by_query = []
     system_orderings = {}
+    system_orderings_by_query_by_sample = []
+    system_orderings_by_sample = []
     
     qids_to_keep = sorted(list({pref["qid"] for pref in prefs if pref["qid"] != "all"}))[:nb_queries] + ["all"] if nb_queries is not None else None
     
@@ -204,7 +206,6 @@ def aggregate_preferences(
     )
 
     for sample in range(num_samples):
-        ...
         sample_qids = None if qids is None else random.sample(qids, sample_size)
 
         src_sample = 0 if (query_fraction < 1.0) else sample
@@ -271,7 +272,11 @@ def aggregate_preferences(
                         rankings_metric
                     )
             system_orderings = output_object
-    return system_orderings_by_query, system_orderings
+            
+            system_orderings_by_query_by_sample.append(system_orderings_by_query)
+            system_orderings_by_sample.append(system_orderings)
+            
+    return system_orderings_by_query_by_sample, system_orderings_by_sample
 
 
 def get_ordering(system_orderings, metric):
